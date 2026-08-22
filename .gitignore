@@ -1,0 +1,3 @@
+# Scratch output from the negative tests. They copy this folder to a temp
+# directory and clean up after themselves; nothing should land here.
+*.tmp

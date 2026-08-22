@@ -1,0 +1,49 @@
+# safe-allow.txt - REVIEW rules that a human has judged safe, per file, with the reason.
+#
+# Format:  <rule-id> | <path relative to repo root, or * for everywhere> | <reason>
+#
+# BLOCK rules can never appear here. They are identifiers, and there is no version of this entry
+# that needs one. If a BLOCK fires, the text is redacted, not excused.
+#
+# The bar for a line in this file: the ABSTRACT PATTERN is what makes the map worth reading, and
+# the SPECIFIC INSTANCE is what would put a live system at risk. A line belongs here only when the
+# text has already been reduced to the abstract form - no product, no route, no account, no
+# mechanism precise enough to reproduce. If you cannot say which specific thing was removed to get
+# there, it is not ready to be allow-listed.
+#
+# Reviewed 2026-08-22. Re-read this file before the final commit; an entry that no longer describes
+# what is actually in the file is worse than no entry, because it reads as though someone checked.
+#
+# THAT IS NOT HYPOTHETICAL - IT HAPPENED HERE. Six entries once read "as above" and "already
+# reviewed there", pointing at each other, claiming an authentication mechanism had been reduced to
+# the abstract form. It had not: the full reproducible text was still in two shipped files. The scan
+# passed and printed a count. Nothing lied except the reasons.
+#
+# So: EVERY REASON STANDS ALONE and states what was removed. No "as above", no "see the other
+# entry", no reference to a review rather than to the text. check-safe.ps1 now prints every
+# suppression with its claimed reason on every run, and reports any entry that matches nothing, so
+# a false claim has to survive being read rather than merely being counted.
+
+# --- Feature flags: dark / armed ------------------------------------------------------------
+# The concept - a feature built and hidden deliberately, so that FINDING it is the bug and the
+# polarity of the test inverts - is generic to any feature-flagged product and is the single most
+# instructive trap in this map. With no product named, it points at nothing. What was removed: the
+# flag names, the specific hidden features, and the sweep's target.
+hidden | reference/collisions.md | abstract concept only; no flag name, no feature, no product
+hidden | tests/cold-run/produced-map-run02.md | abstract concept only; no flag name, no feature, no product
+hidden | tests/cold-run/MAP-v2.md | abstract concept only; no flag name, no feature, no product
+hidden | tests/cold-run/runs/02-class-A-front-door.md | abstract concept only; no flag name, no feature, no product
+hidden | tests/cold-run/runs/03-class-F2-map-use.md | abstract concept only; no flag name, no feature, no product
+
+# --- Rate limiting ---------------------------------------------------------------------------
+# "The limit is a bucket that refills, so a case assuming a fixed count will not match" is a
+# textbook token bucket. It reveals nothing not in every API design book, and the point being made
+# is about test-case brittleness rather than about the limiter.
+ratelimit | reference/collisions.md | textbook token bucket; no endpoint, no threshold, no window
+
+# --- Identity and signup ----------------------------------------------------------------------
+# REDUCED, then allowed. The original text named the two signup routes and stated exactly which
+# identity each resolves to, which is a reproducible authentication weakness in a running system.
+# What survives is only the warning a tester needs: the two routes do not reliably produce the same
+# identity, so verify which one you are before recording anything. No mechanism, no provider, no
+# reproduction path.
