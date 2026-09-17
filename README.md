@@ -67,7 +67,7 @@ pwsh -NoProfile -File check-map.ps1
 
 It settles the two claims a machine can settle, across every card:
 
-- **Every source a card cites is really there** — the path, the line, the section heading, and where a card quotes the source, the quoted words are on the line it points at.
+- **Every source a card cites is really there** — the path, the line, the section heading, and where a card quotes the source, the quoted words are on the line **that quote is attached to**, not merely on some line the card cites elsewhere. A quote and a citation are two halves of one claim, and each half can be true while the pair is false; checking them separately catches an invented quote and misses a real one hung on the wrong line. Where a quote has no line citation to check it against, the run says so rather than passing it in silence.
 - **Every object marked `ghost` is really absent**, in the scope the card claims. A ghost is a name with nothing wired behind it, and it is the mark that costs a newcomer most: a missing card sends them to ask, a ghost sends them to build against a world that is not there.
 
 A card marked `ghost` that asserts nothing checkable **fails**. Otherwise the cheapest way to pass would be to claim nothing, and the mark needing the most evidence would carry the least.
@@ -80,7 +80,7 @@ The script is read-only against the engagement's repository: it opens files, lis
 pwsh -NoProfile -File check-map.ps1 -Map ./tests/fixture -Territory ./tests/fixture/territory
 ```
 
-Two invented cards over an invented body of work, containing the three shapes the checker settles: a real section heading, a quote on a cited line, and a ghost that is genuinely absent. **Everything in [`tests/fixture/`](tests/fixture/) is made up** — it demonstrates a working check, not a good map. Without it this repository would claim a guarantee nobody could verify from a fresh clone.
+Two invented cards over an invented body of work, containing the three shapes the checker settles: a real section heading, a quote on the line it is attached to, and a ghost that is genuinely absent. **Everything in [`tests/fixture/`](tests/fixture/) is made up** — it demonstrates a working check, not a good map. Without it this repository would claim a guarantee nobody could verify from a fresh clone.
 
 **On its first run it failed this map**, on a ghost claim its author would have sworn to: a card said a function "exists and nothing calls it" when the engagement's own notes said *nothing in the **product** calls it*. Two words lost in paraphrase turned a careful claim into a false one. It also now guards mechanically against the one defect a cold reader had already caught by hand — two files pinning different commits — so that class cannot come back.
 
@@ -104,7 +104,7 @@ A checker that has only ever passed is not evidence of anything, so both are att
 
 | Test | Injects | Result |
 |---|---|---|
-| [`tests/check-map-negative-test.py`](tests/check-map-negative-test.py) | 9 map defects into the fixture, one at a time, plus a control against false positives | **9/9 caught** |
+| [`tests/check-map-negative-test.py`](tests/check-map-negative-test.py) | 10 map defects into the fixture, one at a time, plus two controls — one against false positives, one proving that a quote nothing can check is reported rather than skipped | **10/10 caught** |
 | [`tests/check-safe-negative-test.py`](tests/check-safe-negative-test.py) | 20 planted identifiers, one at a time | **20/20 caught** |
 
 **`check-safe` also caught its own allow-list lying.** Two entries claimed a security mechanism had been reduced to the abstract form. It had not — the full text was still in two files, and the scan passed the whole time because it printed a count instead of the claims. It now prints every exemption, with the reason claimed for it, on every run including passes. **A count is not a control.**

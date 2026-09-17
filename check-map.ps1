@@ -4,7 +4,10 @@
 #
 #   1. PRESENCE. Every source a card cites is really there: at the path, at the line, under the
 #      section heading, and where the card quotes the source, the quoted words are on the line
-#      it points at.
+#      THAT QUOTE IS ATTACHED TO - not merely on one of the lines the card cites somewhere. A
+#      quote and a citation are two halves of one claim, and each half can be true while the pair
+#      is false. Checking the halves separately catches an invented quote and misses a real one
+#      hung on the wrong line, which is the more dangerous of the two because it survives review.
 #   2. ABSENCE. Every noun marked `ghost` is really absent. A ghost is the mark that costs a
 #      newcomer the most (rules.md 4), and it is the only mark that asserts a negative, which is
 #      the hardest thing in the map to be right about and the easiest to leave unchecked.
@@ -63,6 +66,12 @@ $counts = @{ cards = 0; citations = 0; sections = 0; quotes = 0; ghosts = 0; ass
 
 function Add-Fail($where, $msg) { [void]$fails.Add([pscustomobject]@{ Where = $where; Msg = $msg }) }
 function Add-Warn($where, $msg) { [void]$warns.Add([pscustomobject]@{ Where = $where; Msg = $msg }) }
+# Coverage gaps are kept apart from warnings on purpose, and they are printed with Write-Host
+# rather than Say. -Quiet may hide the narration of a run; it must never hide the fact that
+# something went unchecked, or the silence this whole block exists to break comes straight back
+# the moment a caller passes a flag. Same reason FAIL does not go through Say either.
+$unchecked = New-Object System.Collections.ArrayList
+function Add-Unchecked($where, $msg) { [void]$unchecked.Add([pscustomobject]@{ Where = $where; Msg = $msg }) }
 function Say($msg) { if (-not $Quiet) { Write-Host $msg } }
 
 if (-not (Test-Path $Territory)) {
@@ -314,43 +323,107 @@ foreach ($c in $cards) {
         }
     }
 
-    # Where the card quotes the source, the quoted words must be on one of the lines it cites.
+    # Where the card quotes the source, the quoted words must be on the line the quote is ATTACHED
+    # to - not merely on one of the lines the card cites somewhere.
+    #
+    # THE JOIN IS THE CLAIM. A quote and a citation are two halves of one assertion, and each half
+    # can be true while the pair is a lie: real words, real line, wrong pairing. Checking that the
+    # words appear on SOME cited line catches invention and is blind to misattribution, and a card
+    # citing three lines gets three chances to be accidentally right. Comp #12 was decided on
+    # exactly this - fifteen entries were given a citation whose quote was correct and whose
+    # provision id had been moved one place, and seven passed it without a murmur. Every one of
+    # them already parsed both sides of the join. See Competitions\rounds\comp-12-auditor\.
+    #
+    # ATTACHMENT IS BY PROXIMITY, because that is how the cards are written: the citation comes
+    # first and the quote follows it in brackets. Nearest citation before the quote wins; if the
+    # quote comes first, the nearest one after it does. That is a syntactic rule, not a semantic
+    # one, and it is stated here so a reader can see what it would get wrong.
+    #
     # rules.md 8 allows one short quote "only when the exact wording is the point" - which is
     # exactly when it is worth confirming the wording is the source's and not the cartographer's.
-    $citedLines = New-Object System.Collections.ArrayList
+
+    $lineCites = New-Object System.Collections.ArrayList
     foreach ($m in [regex]::Matches($text, '.(qa/[^`\s]*:\d+).')) {
         $r = Resolve-Citation $m.Groups[1].Value
         if ($r.Ok) {
             $src = @(Get-Content -Path $r.Full -Encoding UTF8)
-            [void]$citedLines.Add($src[$r.Line - 1])
+            [void]$lineCites.Add([pscustomobject]@{
+                At   = $m.Index
+                Cite = $m.Groups[1].Value
+                Text = $src[$r.Line - 1]
+            })
         }
     }
 
-    if ($citedLines.Count -gt 0) {
-        foreach ($m in [regex]::Matches($text, '"([^"]{12,})"')) {
-            $quote = $m.Groups[1].Value
-            $counts.quotes++
+    # THE PATTERN MUST NOT CROSS A LINE BREAK. Found 2026-09-18 (CMP-029): `"([^"]{12,})"` pairs the
+    # CLOSING mark of one quotation with the OPENING mark of the next, so it captured the prose
+    # BETWEEN two ordinary scare-quotes - spans running across tables and paragraph breaks - and
+    # checked those as if they were the source's wording. Six of the nine matches in the shipped map
+    # were such spans, and three genuine short quotations were never matched at all. A quote that
+    # rules.md 8 permits is "one short quote ... only when the exact wording is the point"; a match
+    # that swallows a paragraph break is not one under any reading, so excluding newlines is a
+    # correction rather than a policy choice. The residual case - a quotation mark used for emphasis
+    # rather than citation, on a single line - is NOT fixed here and is deliberately left visible.
+    foreach ($m in [regex]::Matches($text, '"([^"\n\r]{12,})"')) {
+        $quote = $m.Groups[1].Value
 
-            # An elided quote is checked fragment by fragment: the ellipsis stands for text the
-            # card left out, so each surviving run of words must still appear on the cited line.
-            $frags = @([regex]::Split($quote, ($ELLIPSIS + '|\.\.\.')) |
-                       ForEach-Object { $_.Trim() } |
-                       Where-Object { $_.Length -ge 6 })
+        # An elided quote is checked fragment by fragment: the ellipsis stands for text the card
+        # left out, so each surviving run of words must still appear on the cited line.
+        $frags = @([regex]::Split($quote, ($ELLIPSIS + '|\.\.\.')) |
+                   ForEach-Object { $_.Trim() } |
+                   Where-Object { $_.Length -ge 6 })
 
-            if ($frags.Count -eq 0) { continue }
+        if ($frags.Count -eq 0) { continue }
 
-            $matched = $false
-            foreach ($ln in $citedLines) {
-                $norm = ($ln -replace '\s+', ' ')
-                $all  = $true
-                foreach ($fr in $frags) {
-                    $fn = ($fr -replace '\s+', ' ')
-                    if ($norm -notmatch [regex]::Escape($fn)) { $all = $false; break }
-                }
-                if ($all) { $matched = $true; break }
-            }
-            if (-not $matched) {
-                Add-Fail "$($c.Rel):$($c.Line)" "$($c.Title): quotes '$quote' but those words are not on any line it cites"
+        # NO LINE TO CHECK IT AGAINST IS A REPORTED CONDITION, NOT A SKIP. The old check ran only
+        # when the card cited at least one line, so a quote in a card that cites none went past in
+        # silence and the run still said PASS. Absence of a check must never read as a check that
+        # passed - the same inversion this script already applies to a ghost that asserts nothing.
+        # It is a WARN rather than a FAIL only because promoting it would change the verdict on a
+        # judged map that cannot be re-run here; see Competitions\REGISTER.md CMP-028 and CMP-029.
+        if ($lineCites.Count -eq 0) {
+            Add-Unchecked "$($c.Rel):$($c.Line)" "$($c.Title): quotes '$quote' with no line citation anywhere in the card, so nothing checks the wording"
+            continue
+        }
+
+        # Nearest citation before the quote; failing that, nearest after it.
+        $before = @($lineCites | Where-Object { $_.At -lt $m.Index } | Sort-Object At)
+        if ($before.Count -gt 0) {
+            $owner = $before[-1]
+        } else {
+            $owner = @($lineCites | Sort-Object At)[0]
+        }
+
+        $counts.quotes++
+
+        $norm = ($owner.Text -replace '\s+', ' ')
+        $all  = $true
+        foreach ($fr in $frags) {
+            $fn = ($fr -replace '\s+', ' ')
+            if ($norm -notmatch [regex]::Escape($fn)) { $all = $false; break }
+        }
+
+        if (-not $all) {
+            # Say what the cited line actually holds. A checker that only announces a mismatch
+            # makes the reader go and look; one that quotes the wrong line back has already
+            # finished the argument.
+            $shown = $norm.Trim()
+            if ($shown.Length -gt 90) { $shown = $shown.Substring(0, 90) + '...' }
+
+            # Distinguish the two failures, because they are different mistakes. Words that appear
+            # on some OTHER cited line are a misattribution: the card is real and pointed wrong.
+            # Words that appear nowhere are an invention.
+            $elsewhere = @($lineCites | Where-Object {
+                $n2 = ($_.Text -replace '\s+', ' ')
+                $ok = $true
+                foreach ($fr in $frags) { if ($n2 -notmatch [regex]::Escape(($fr -replace '\s+', ' '))) { $ok = $false; break } }
+                $ok
+            })
+
+            if ($elsewhere.Count -gt 0) {
+                Add-Fail "$($c.Rel):$($c.Line)" ("$($c.Title): quotes '$quote' against $($owner.Cite), but that line reads '$shown'. The words are on $($elsewhere[0].Cite) instead - the quote is real and the citation points somewhere else")
+            } else {
+                Add-Fail "$($c.Rel):$($c.Line)" ("$($c.Title): quotes '$quote' against $($owner.Cite), but that line reads '$shown'")
             }
         }
     }
@@ -460,8 +533,16 @@ if ($head) { $at = ' at ' + $head.Substring(0, 8) }
 Say ''
 Say ('  territory  ' + $Territory + $at)
 Say ('  map        ' + $Map)
-Say ('  checked    {0} cards, {1} citations, {2} section refs, {3} quotes, {4} ghost(s) carrying {5} assertion(s)' -f `
+Say ('  checked    {0} cards, {1} citations, {2} section refs, {3} quotes bound to a cited line, {4} ghost(s) carrying {5} assertion(s)' -f `
         $counts.cards, $counts.citations, $counts.sections, $counts.quotes, $counts.ghosts, $counts.assertions)
+if ($unchecked.Count -gt 0) {
+    Write-Host ('  UNCHECKED  {0} quote(s) had no line citation to check them against:' -f $unchecked.Count)
+    foreach ($u in $unchecked) {
+        Write-Host ('             {0}' -f $u.Where)
+        Write-Host ('             {0}' -f $u.Msg)
+    }
+    Write-Host '             This is not a failed claim. It is a claim nothing looked at.'
+}
 Say ''
 
 foreach ($w in $warns) { Say ('WARN  {0}{1}      {2}' -f $w.Where, [Environment]::NewLine, $w.Msg) }
