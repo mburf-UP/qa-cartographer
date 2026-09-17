@@ -61,7 +61,7 @@ def reset():
 
 def run():
     p = subprocess.run(
-        ["powershell", "-ExecutionPolicy", "Bypass", "-File", CHECKER,
+        ["pwsh", "-NoProfile", "-File", CHECKER,
          "-Map", WORK, "-Territory", os.path.join(WORK, "territory"), "-Quiet"],
         capture_output=True, text=True)
     return p.returncode, (p.stdout or "") + (p.stderr or "")

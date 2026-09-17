@@ -62,7 +62,7 @@ Both runs, and the four before them, are in [`tests/cold-run/runs/`](tests/cold-
 ## Whether any of this is true
 
 ```text
-powershell -ExecutionPolicy Bypass -File check-map.ps1
+pwsh -NoProfile -File check-map.ps1
 ```
 
 It settles the two claims a machine can settle, across every card:
@@ -77,7 +77,7 @@ The script is read-only against the engagement's repository: it opens files, lis
 **You can run it, even though you cannot see the territory.** The engagement is a third party's private system and is not in this repository, so a synthetic one ships instead:
 
 ```text
-powershell -ExecutionPolicy Bypass -File check-map.ps1 -Map ./tests/fixture -Territory ./tests/fixture/territory
+pwsh -NoProfile -File check-map.ps1 -Map ./tests/fixture -Territory ./tests/fixture/territory
 ```
 
 Two invented cards over an invented body of work, containing the three shapes the checker settles: a real section heading, a quote on a cited line, and a ghost that is genuinely absent. **Everything in [`tests/fixture/`](tests/fixture/) is made up** — it demonstrates a working check, not a good map. Without it this repository would claim a guarantee nobody could verify from a fresh clone.
@@ -89,7 +89,7 @@ Every fix is logged in [`tests/fix-log.md`](tests/fix-log.md) with the change an
 ### The second control: nothing identifying ships
 
 ```text
-powershell -ExecutionPolicy Bypass -File check-safe.ps1
+pwsh -NoProfile -File check-safe.ps1
 ```
 
 It scans every file here against a deny-list and exits non-zero on any hit. **Identifiers cannot be excused** — an address, a domain, a person, a repository, an internal symbol, a case-ID prefix. **Security-shaped statements** — an authentication behaviour, an administrative route, a privilege level — fail until a human reduces them to the abstract form and records in [`safe-allow.txt`](safe-allow.txt) what was removed to get there.

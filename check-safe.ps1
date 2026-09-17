@@ -11,7 +11,7 @@
 # So the risk is not carelessness. It is that the useful instinct and the dangerous one are the
 # same instinct, and it recurs every single time a new run is recorded.
 #
-#   powershell -ExecutionPolicy Bypass -File check-safe.ps1
+#   pwsh -NoProfile -File check-safe.ps1
 #
 # Exit 0 = nothing identifying found. Exit 1 = something is, and it does not ship until it is
 # redacted or, for a REVIEW rule only, allow-listed with a stated reason in safe-allow.txt.

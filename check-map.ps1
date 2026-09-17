@@ -19,7 +19,7 @@
 # assertion is a FAIL, not a skip. Otherwise the cheapest way to pass is to assert nothing, and
 # the mark that needs the most evidence would be the one carrying the least.
 #
-#   powershell -ExecutionPolicy Bypass -File .\check-map.ps1
+#   pwsh -NoProfile -File ./check-map.ps1
 #
 # Exit 0 = every claim checked out. Exit 1 = at least one claim is wrong, and so is the map.
 #

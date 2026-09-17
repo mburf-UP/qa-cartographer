@@ -12,7 +12,7 @@ it would be a fair hit.
 ## Run it
 
 ```text
-powershell -ExecutionPolicy Bypass -File ..\..\check-map.ps1 -Map .\map -Territory .	erritory
+pwsh -NoProfile -File ../../check-map.ps1 -Map ./map -Territory ./territory
 ```
 
 Expect a pass: 2 cards, citations resolving, one ghost proved absent by `path ... absent`.
